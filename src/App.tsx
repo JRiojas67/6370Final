@@ -6,7 +6,14 @@ type Provider = "openai" | "anthropic";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-type Health = { openai: boolean; anthropic: boolean; fal: boolean };
+type ImageEngine = "nano-banana" | "reve";
+
+type Health = {
+  openai: boolean;
+  anthropic: boolean;
+  fal: boolean;
+  reve: boolean;
+};
 
 async function api<T>(path: string, body?: object): Promise<T> {
   const r = await fetch(path, {
@@ -50,7 +57,7 @@ export default function App() {
     {
       role: "assistant",
       content:
-        "Hi — I'm **Orbit**, your work and creative copilot. Pick **ChatGPT** or **Claude** on the left, ask me anything, and use **Nano Banana** on the right when you want images. What are we tackling first?",
+        "Hi — I'm **BEAn**, your work and creative copilot. Pick **ChatGPT** or **Claude** on the left, ask me anything, and use the **image studio** on the right — **Nano Banana** (fal.ai) or **Reve** (AI/ML API). What are we tackling first?",
     },
   ]);
   const [input, setInput] = useState("");
@@ -58,6 +65,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
 
   const [imagePrompt, setImagePrompt] = useState("");
+  const [imageEngine, setImageEngine] = useState<ImageEngine>("nano-banana");
   const [aspectRatio, setAspectRatio] = useState("");
   const [resolution, setResolution] = useState("1K");
   const [imageLoading, setImageLoading] = useState(false);
@@ -135,11 +143,12 @@ export default function App() {
         images: { url: string }[];
         description: string;
       }>("/api/image", {
+        engine: imageEngine,
         prompt,
         ...(aspectRatio ? { aspect_ratio: aspectRatio } : {}),
-        resolution,
-        output_format: "png",
-        num_images: 1,
+        ...(imageEngine === "nano-banana"
+          ? { resolution, output_format: "png", num_images: 1 }
+          : {}),
       });
       const url = res.images[0]?.url;
       if (url) setImageUrl(url);
@@ -149,7 +158,7 @@ export default function App() {
     } finally {
       setImageLoading(false);
     }
-  }, [imagePrompt, aspectRatio, resolution]);
+  }, [imagePrompt, aspectRatio, resolution, imageEngine]);
 
   const useLastReplyAsPrompt = useCallback(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -164,9 +173,9 @@ export default function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">O</div>
+          <div className="brand-mark">B</div>
           <div>
-            <h1>Orbit</h1>
+            <h1>BEAn</h1>
             <span>Work & creative copilot</span>
           </div>
         </div>
@@ -200,13 +209,14 @@ export default function App() {
         </div>
 
         <div className="status-pill">
-          <strong>Personality:</strong> Orbit is warm, direct, and practical — built
+          <strong>Personality:</strong> BEAn is warm, direct, and practical — built
           for drafting, planning, and creative direction. Keys stay on the server;
           add <code style={{ fontFamily: "var(--mono)", fontSize: "0.68rem" }}>.env</code>{" "}
           from <code style={{ fontFamily: "var(--mono)", fontSize: "0.68rem" }}>.env.example</code>.
           <br />
           <br />
-          <strong>Nano Banana:</strong> {health?.fal ? "fal.ai connected" : "set FAL_KEY"}.
+          <strong>Nano Banana:</strong> {health?.fal ? "fal.ai" : "set FAL_KEY"} ·{" "}
+          <strong>Reve:</strong> {health?.reve ? "AI/ML API" : "set AIMLAPI_KEY"}.
         </div>
       </aside>
 
@@ -223,7 +233,7 @@ export default function App() {
         <div className="messages" ref={listRef}>
           {messages.map((m, i) => (
             <div key={i} className={`msg ${m.role}`}>
-              <div className="msg-role">{m.role === "user" ? "You" : "Orbit"}</div>
+              <div className="msg-role">{m.role === "user" ? "You" : "BEAn"}</div>
               <div className="msg-body">
                 {m.role === "assistant" ? (
                   <MarkdownBody text={m.content} />
@@ -235,7 +245,7 @@ export default function App() {
           ))}
           {sending && (
             <div className="msg assistant">
-              <div className="msg-role">Orbit</div>
+              <div className="msg-role">BEAn</div>
               <div className="loading-dots" aria-label="Thinking">
                 <span />
                 <span />
@@ -247,7 +257,7 @@ export default function App() {
 
         <div className="composer">
           <textarea
-            placeholder="Message Orbit…"
+            placeholder="Message BEAn…"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -265,12 +275,45 @@ export default function App() {
       </main>
 
       <section className="studio-column">
-        <div className="nano-badge">Nano Banana · fal.ai</div>
+        <div
+          className={
+            imageEngine === "reve" ? "reve-badge" : "nano-badge"
+          }
+        >
+          {imageEngine === "reve"
+            ? "Reve · AI/ML API"
+            : "Nano Banana · fal.ai"}
+        </div>
         <h2>Image studio</h2>
         <p className="studio-sub">
           Creativity prompts seed ideas; <strong>Expand with AI</strong> turns them into
-          a rich prompt using your selected chat model. Then generate with Google Nano Banana Pro.
+          a rich prompt using your selected chat model. Pick an engine, then generate.
         </p>
+
+        <div className="engine-toggle" role="group" aria-label="Image engine">
+          <button
+            type="button"
+            className={`engine-btn ${imageEngine === "nano-banana" ? "active" : ""}`}
+            onClick={() => {
+              setImageEngine("nano-banana");
+              setStudioError(null);
+            }}
+          >
+            Nano Banana
+            <small>Google · fal</small>
+          </button>
+          <button
+            type="button"
+            className={`engine-btn ${imageEngine === "reve" ? "active" : ""}`}
+            onClick={() => {
+              setImageEngine("reve");
+              setStudioError(null);
+            }}
+          >
+            Reve
+            <small>create-image</small>
+          </button>
+        </div>
 
         <div className="prompt-chips">
           {CREATIVITY_PROMPTS.map((p) => (
@@ -321,21 +364,36 @@ export default function App() {
           <label>
             Aspect
             <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)}>
-              <option value="">Default (model)</option>
+              <option value="">
+                {imageEngine === "reve" ? "Default (3:2)" : "Default (model)"}
+              </option>
               <option value="1:1">1:1</option>
               <option value="16:9">16:9</option>
               <option value="9:16">9:16</option>
               <option value="4:3">4:3</option>
               <option value="3:4">3:4</option>
+              <option value="3:2">3:2</option>
+              <option value="2:3">2:3</option>
             </select>
           </label>
-          <label>
+          <label
+            className={
+              imageEngine === "reve" ? "label-muted" : undefined
+            }
+          >
             Resolution
-            <select value={resolution} onChange={(e) => setResolution(e.target.value)}>
+            <select
+              value={resolution}
+              onChange={(e) => setResolution(e.target.value)}
+              disabled={imageEngine === "reve"}
+            >
               <option value="1K">1K</option>
               <option value="2K">2K</option>
               <option value="4K">4K</option>
             </select>
+            {imageEngine === "reve" && (
+              <span className="field-hint">Nano Banana only</span>
+            )}
           </label>
         </div>
 
@@ -346,7 +404,11 @@ export default function App() {
             <img src={imageUrl} alt="Generated" />
           ) : (
             <div className="placeholder">
-              {imageLoading ? "Rendering with Nano Banana…" : "Your image will appear here."}
+              {imageLoading
+                ? imageEngine === "reve"
+                  ? "Rendering with Reve…"
+                  : "Rendering with Nano Banana…"
+                : "Your image will appear here."}
             </div>
           )}
         </div>

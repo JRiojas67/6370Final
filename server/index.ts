@@ -7,7 +7,8 @@ import { fal } from "@fal-ai/client";
 import type { NanoBananaProInput } from "@fal-ai/client/endpoints";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { ORBIT_SYSTEM, IMAGE_PROMPT_SYSTEM } from "./personality.js";
+import { BEAN_SYSTEM, IMAGE_PROMPT_SYSTEM } from "./personality.js";
+import { reveCreateImage } from "./reve.js";
 
 const PORT = Number(process.env.PORT) || 3001;
 const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
@@ -17,6 +18,7 @@ const ANTHROPIC_MODEL =
 const openaiKey = process.env.OPENAI_API_KEY;
 const anthropicKey = process.env.ANTHROPIC_API_KEY;
 const falKey = process.env.FAL_KEY;
+const aimlApiKey = process.env.AIMLAPI_KEY;
 
 const openai = openaiKey ? new OpenAI({ apiKey: openaiKey }) : null;
 const anthropic = anthropicKey ? new Anthropic({ apiKey: anthropicKey }) : null;
@@ -75,6 +77,7 @@ app.get("/api/health", (_req, res) => {
     openai: Boolean(openai),
     anthropic: Boolean(anthropic),
     fal: Boolean(falKey),
+    reve: Boolean(aimlApiKey),
   });
 });
 
@@ -93,7 +96,7 @@ app.post("/api/chat", async (req, res) => {
         return;
       }
       const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-        { role: "system", content: ORBIT_SYSTEM },
+        { role: "system", content: BEAN_SYSTEM },
         ...messages
           .filter((m) => m.role !== "system")
           .map((m) => ({
@@ -120,7 +123,7 @@ app.post("/api/chat", async (req, res) => {
       const msg = await anthropic.messages.create({
         model: ANTHROPIC_MODEL,
         max_tokens: 4096,
-        system: ORBIT_SYSTEM,
+        system: BEAN_SYSTEM,
         messages: anthropicMessages,
       });
       const block = msg.content.find((b) => b.type === "text");
@@ -193,14 +196,43 @@ app.post("/api/creativity", async (req, res) => {
 
 app.post("/api/image", async (req, res) => {
   try {
-    if (!falKey) {
-      res.status(503).json({ error: "FAL_KEY not configured (fal.ai)" });
-      return;
-    }
     const prompt =
       typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
     if (!prompt) {
       res.status(400).json({ error: "prompt required" });
+      return;
+    }
+
+    const engine = req.body?.engine === "reve" ? "reve" : "nano-banana";
+
+    if (engine === "reve") {
+      if (!aimlApiKey) {
+        res
+          .status(503)
+          .json({
+            error:
+              "AIMLAPI_KEY not configured (Reve via AI/ML API — see .env.example)",
+          });
+        return;
+      }
+      const aspect_ratio = req.body?.aspect_ratio;
+      const out = await reveCreateImage({
+        apiKey: aimlApiKey,
+        prompt,
+        aspect_ratio:
+          typeof aspect_ratio === "string" ? aspect_ratio : undefined,
+      });
+      res.json({
+        engine: "reve",
+        images: [{ url: out.url }],
+        description: "",
+        requestId: out.requestId,
+      });
+      return;
+    }
+
+    if (!falKey) {
+      res.status(503).json({ error: "FAL_KEY not configured (fal.ai)" });
       return;
     }
 
@@ -254,6 +286,7 @@ app.post("/api/image", async (req, res) => {
       description?: string;
     };
     res.json({
+      engine: "nano-banana",
       images: data.images ?? [],
       description: data.description ?? "",
       requestId: result.requestId,

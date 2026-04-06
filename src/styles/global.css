@@ -383,6 +383,70 @@ a {
   margin-bottom: 0.75rem;
 }
 
+.reve-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #a78bfa;
+  margin-bottom: 0.75rem;
+}
+
+.engine-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.engine-btn {
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.engine-btn small {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+  font-weight: 500;
+}
+
+.engine-btn:hover {
+  background: var(--surface2);
+}
+
+.engine-btn.active {
+  border-color: rgba(167, 139, 250, 0.45);
+  background: rgba(167, 139, 250, 0.08);
+}
+
+.engine-btn.active:first-child {
+  border-color: rgba(52, 211, 153, 0.4);
+  background: rgba(52, 211, 153, 0.08);
+}
+
+.studio-select-row label.label-muted {
+  opacity: 0.65;
+}
+
+.field-hint {
+  display: block;
+  font-size: 0.62rem;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+  margin-top: 0.2rem;
+  font-weight: 400;
+}
+
 .prompt-chips {
   display: flex;
   flex-wrap: wrap;
